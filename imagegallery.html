@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Image Gallery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6; 
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: white  
+        }
+        .gallery-item {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            aspect-ratio: 1 / 1; 
+            overflow: hidden;
+        }
+        .gallery-item:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .lightbox-modal {
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+        }
+        .lightbox-content {
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+        .lightbox-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-800 mb-6 text-center">
+            Natural Wonders Photo Gallery
+        </h1>
+        <p class="text-lg text-gray-500 mb-10 text-center max-w-2xl mx-auto">
+            A uniform grid of visually rich photographs showcasing landscapes and natural beauty.
+        </p>
+        <div id="gallery-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        </div>
+    </div>
+    <div id="lightbox" class="lightbox-modal fixed inset-0 hidden items-center justify-center p-4" onclick="closeLightbox(event)">
+        <button id="close-btn" class="absolute top-4 right-4 text-white text-3xl p-2 rounded-full hover:bg-white/10 transition" aria-label="Close Gallery" onclick="closeLightbox()">
+            &times;
+        </button>
+
+        <button id="prev-btn" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white text-5xl p-4 opacity-75 hover:opacity-100 transition focus:outline-none" aria-label="Previous Image">
+            &#10094;
+        </button>
+
+        <button id="next-btn" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white text-5xl p-4 opacity-75 hover:opacity-100 transition focus:outline-none" aria-label="Next Image">
+            &#10095;
+        </button>
+
+        <div class="lightbox-content flex flex-col items-center justify-center p-4">
+            <img id="lightbox-img" class="lightbox-img rounded-lg shadow-2xl" src="" alt="Full size gallery image">
+            <p id="lightbox-caption" class="text-white text-lg mt-4 text-center font-medium"></p>
+        </div>
+    </div>
+
+    <script>
+       
+        const imagesData = [
+           
+            { id: 1, src: "https://picsum.photos/600/600?random=100", alt: "Green canopy of a deep, misty forest." },
+            { id: 2, src: "https://picsum.photos/600/600?random=101", alt: "A dark sky filled with thousands of dazzling stars." },
+            { id: 3, src: "https://picsum.photos/600/600?random=102", alt: "Red rock canyon trail under the bright sun." },
+            { id: 4, src: "https://picsum.photos/600/600?random=103", alt: "Clear blue water and gentle ocean waves." },
+            { id: 5, src: "https://picsum.photos/600/600?random=104", alt: "Field of golden wheat swaying in the summer breeze." },
+            { id: 6, src: "https://picsum.photos/600/600?random=105", alt: "Wet, moss-covered stones in a flowing stream." },
+            { id: 7, src: "https://picsum.photos/600/600?random=106", alt: "A distant snowy mountain peak against a bright blue sky." },
+            { id: 8, src: "https://picsum.photos/600/600?random=107", alt: "Texture of dark, rugged volcanic rock formations." },
+            { id: 9, src: "https://picsum.photos/600/600?random=108", alt: "Sunlight filtering through a thick jungle canopy." },
+            { id: 10, src: "https://picsum.photos/600/600?random=109", alt: "A vast, frozen tundra landscape with snow and ice." },
+            { id: 11, src: "https://picsum.photos/600/600?random=110", alt: "Colorful coral reef underwater scene with marine life." },
+            { id: 12, src: "https://picsum.photos/600/600?random=111", alt: "Rolling green hills under a partly cloudy sky." },
+            { id: 13, src: "https://picsum.photos/600/600?random=112", alt: "A close-up of a delicate spider web covered in morning dew." },
+            { id: 14, src: "https://picsum.photos/600/600?random=113", alt: "Powerful waterfall cascading into a deep, misty pool." },
+            { id: 15, src: "https://picsum.photos/600/600?random=114", alt: "A lone tree silhouetted against a vibrant orange sunrise." },
+            { id: 16, src: "https://picsum.photos/600/600?random=115", alt: "Abstract pattern of cracked dry earth in a desert." },
+        ];
+
+        let currentImageIndex = 0;
+
+        const galleryGrid = document.getElementById('gallery-grid');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxCaption = document.getElementById('lightbox-caption');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        function renderGallery() {
+            galleryGrid.innerHTML = '';
+            imagesData.forEach((image, index) => {
+                const item = document.createElement('div');
+                item.className = 'gallery-item bg-white rounded-xl shadow-lg hover:shadow-xl aspect-square'; 
+                item.setAttribute('data-index', index);
+
+                item.innerHTML = `
+                    <div class="w-full h-full">
+                        <img 
+                            src="${image.src}" 
+                            alt="${image.alt}" 
+                            class="w-full h-full object-cover rounded-xl"
+                            loading="lazy"
+                            data-index="${index}"
+                            onclick="openLightbox(${index})"
+                            onerror="this.onerror=null; this.src='https://placehold.co/600x600/cccccc/000000?text=Error';"
+                        >
+                    </div>
+                `;
+                galleryGrid.appendChild(item);
+            });
+        }
+
+        function openLightbox(index) {
+            currentImageIndex = index;
+            updateLightboxContent();
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
+            document.body.style.overflow = 'hidden'; 
+        }
+
+        function updateLightboxContent() {
+            const image = imagesData[currentImageIndex];
+            lightboxImg.src = image.src;
+            lightboxImg.alt = image.alt;
+            lightboxCaption.textContent = image.alt;
+            prevBtn.style.display = currentImageIndex === 0 ? 'none' : 'block';
+            nextBtn.style.display = currentImageIndex === imagesData.length - 1 ? 'none' : 'block';
+        }
+
+        function nextImage() {
+            if (currentImageIndex < imagesData.length - 1) {
+                currentImageIndex++;
+                updateLightboxContent();
+            }
+        }
+
+        function prevImage() {
+            if (currentImageIndex > 0) {
+                currentImageIndex--;
+                updateLightboxContent();
+            }
+        }
+
+
+        function closeLightbox(event) {
+
+            if (!event || event.target === lightbox || event.target.id === 'close-btn' || event.target.id === 'close-btn' || event.target.id === 'lightbox') {
+                lightbox.classList.add('hidden');
+                lightbox.classList.remove('flex');
+                document.body.style.overflow = 'auto'; 
+            }
+        }
+
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            nextImage();
+        });
+
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            prevImage();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (lightbox.classList.contains('flex')) {
+                if (e.key === 'ArrowRight') {
+                    nextImage();
+                } else if (e.key === 'ArrowLeft') {
+                    prevImage();
+                } else if (e.key === 'Escape') {
+                    closeLightbox();
+                }
+            }
+        });
+
+        window.onload = renderGallery;
+
+    </script>
+
+</body>
+</html>
